@@ -1,0 +1,327 @@
+/* Variables CSS pour la cohérence */
+:root {
+    --primary-color: #1a365d;
+    --secondary-color: #2c5282;
+    --background-color: #2d3748;
+    --surface-color: #4a5568;
+    --success-color: #38a169;
+    --warning-color: #d69e2e;
+    --danger-color: #e53e3e;
+    --info-color: #3182ce;
+    --text-primary: #f7fafc;
+    --text-secondary: #cbd5e0;
+    --text-accent: #63b3ed;
+    --border-radius: 12px;
+    --shadow: 0 4px 12px rgba(0,0,0,0.15);
+    --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Styles globaux */
+.main {
+    background: linear-gradient(135deg, var(--background-color) 0%, #1a202c 100%);
+    font-family: 'Inter', sans-serif;
+    color: var(--text-primary);
+    min-height: 100vh;
+}
+
+.stApp {
+    background: linear-gradient(135deg, var(--background-color) 0%, #1a202c 100%);
+}
+
+/* En-tête principal */
+.main-header {
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+    color: white;
+    border-radius: var(--border-radius);
+    padding: 2rem;
+    margin-bottom: 2rem;
+    box-shadow: var(--shadow);
+    position: relative;
+    overflow: hidden;
+}
+
+.main-header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 100px;
+    height: 100px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 50%;
+    transform: translate(30px, -30px);
+}
+
+.main-header h1 {
+    margin: 0;
+    font-size: 2.5rem;
+    font-weight: 700;
+    letter-spacing: -0.025em;
+}
+
+.main-header p {
+    margin: 0.5rem 0 0 0;
+    font-size: 1.125rem;
+    opacity: 0.9;
+    font-weight: 400;
+}
+
+/* Styles des onglets (tabs) */
+.stTabs [data-baseweb="tab-list"] {
+    gap: 12px;
+    background-color: var(--surface-color);
+    padding: 8px;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+}
+.stTabs [data-baseweb="tab"] {
+    background-color: var(--background-color);
+    border-radius: var(--border-radius) / 2;
+    padding: 10px 20px;
+    color: var(--text-secondary);
+    font-weight: 500;
+    transition: background-color 0.3s, color 0.3s;
+}
+.stTabs [aria-selected="true"] {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+/* Cartes métriques modernes avec taille uniforme */
+.metric-card {
+    background: linear-gradient(135deg, var(--surface-color) 0%, #718096 100%);
+    border-radius: var(--border-radius);
+    padding: 1.5rem;
+    box-shadow: var(--shadow);
+    margin-bottom: 1.5rem;
+    border: 1px solid rgba(255,255,255,0.1);
+    transition: var(--transition);
+    position: relative;
+    overflow: hidden;
+    height: 150px; /* Taille fixe pour toutes les cartes */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.metric-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+}
+
+.metric-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--info-color), var(--secondary-color));
+}
+
+.metric-card h3 {
+    margin: 0 0 0.5rem 0;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.metric-card h1 {
+    margin: 0;
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1.2;
+}
+
+.metric-card small {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+/* Cartes pour les transactions avec un statut visuel */
+.risk-card {
+    border-radius: var(--border-radius);
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+    box-shadow: var(--shadow);
+    transition: var(--transition);
+    border: 1px solid rgba(255,255,255,0.1);
+    position: relative;
+}
+
+.risk-card.normal {
+    background: linear-gradient(135deg, #22543d 0%, #2f855a 100%);
+    border-left: 4px solid var(--success-color);
+}
+.risk-card.normal:hover { transform: translateX(4px); box-shadow: 0 8px 25px rgba(56, 161, 105, 0.2); }
+
+.risk-card.suspicious {
+    background: linear-gradient(135deg, #74542a 0%, #9c6e2a 100%);
+    border-left: 4px solid var(--warning-color);
+}
+.risk-card.suspicious:hover { transform: translateX(4px); box-shadow: 0 8px 25px rgba(214, 158, 46, 0.2); }
+
+.risk-card.high-risk {
+    background: linear-gradient(135deg, #742a2a 0%, #9c2a2a 100%);
+    border-left: 4px solid var(--danger-color);
+}
+.risk-card.high-risk:hover { transform: translateX(4px); box-shadow: 0 8px 25px rgba(229, 62, 62, 0.2); }
+
+/* Zone d'upload moderne */
+.file-uploader {
+    background: linear-gradient(135deg, var(--surface-color) 0%, #718096 100%);
+    border-radius: var(--border-radius);
+    padding: 2rem;
+    margin-bottom: 2rem;
+    text-align: center;
+    border: 2px dashed rgba(255,255,255,0.2);
+    transition: var(--transition);
+    position: relative;
+}
+
+.file-uploader:hover {
+    border-color: var(--info-color);
+    background: linear-gradient(135deg, #4a5568 0%, #2d3748 100%);
+}
+
+.file-uploader h3 {
+    margin: 0 0 0.5rem 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.file-uploader p {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+}
+
+/* Sections avec titres */
+.section-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 2rem 0 1rem 0;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid var(--info-color);
+    position: relative;
+}
+
+.section-title::before {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    width: 50px;
+    height: 2px;
+}
+
+/* Filtres modernes */
+.filter-container {
+    background: var(--surface-color);
+    border-radius: var(--border-radius);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    box-shadow: var(--shadow);
+    border: 1px solid rgba(255,255,255,0.1);
+}
+
+/* Sidebar personnalisée */
+.css-1d391kg {
+    background: linear-gradient(180deg, var(--primary-color) 0%, var(--background-color) 100%);
+}
+
+/* Boutons personnalisés */
+.stButton > button {
+    background: linear-gradient(135deg, var(--info-color) 0%, var(--secondary-color) 100%);
+    color: white;
+    border: none;
+    border-radius: var(--border-radius);
+    padding: 0.75rem 1.5rem;
+    font-weight: 600;
+    transition: var(--transition);
+    box-shadow: var(--shadow);
+}
+
+.stButton > button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(49, 130, 206, 0.3);
+}
+
+/* Selectbox et inputs */
+.stSelectbox > div > div {
+    background: var(--surface-color);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: var(--border-radius);
+    color: var(--text-primary);
+}
+
+.stNumberInput > div > div > input {
+    background: var(--surface-color);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: var(--border-radius);
+    color: var(--text-primary);
+}
+
+/* Checkbox */
+.stCheckbox > label {
+    color: var(--text-primary);
+    font-weight: 500;
+}
+
+/* Graphiques */
+.js-plotly-plot {
+    border-radius: var(--border-radius);
+    overflow: hidden;
+    box-shadow: var(--shadow);
+}
+
+/* Animations d'entrée */
+@keyframes slideInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.metric-card, .risk-card {
+    animation: slideInUp 0.6s ease-out;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .main-header h1 {
+        font-size: 2rem;
+    }
+    
+    .metric-card h1 {
+        font-size: 1.5rem;
+    }
+}
+
+/* Scrollbar personnalisée */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--background-color);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--surface-color);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--secondary-color);
+}

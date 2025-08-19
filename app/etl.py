@@ -284,7 +284,7 @@ def transform_data(transactions):
         logger.info(f"Colonnes finales: {df.columns.tolist()}")
         logger.info(f"Exemple de données:\n{df.iloc[0].to_dict()}")
 
-        return df
+        return df.reset_index(drop=True)
 
     except Exception as e:
         logger.error(f"Erreur lors du nettoyage des données: {str(e)}", exc_info=True)
