@@ -225,55 +225,64 @@ def display_geographical_analysis(df):
     
     st.plotly_chart(fig, use_container_width=True)
     
-def display_temporal_analysis(df):
-    """Affiche l'analyse des tendances temporelles des anomalies."""
-    st.markdown('<h2 class="section-title">Analyse des Tendances Temporelles</h2>', unsafe_allow_html=True)
-    
-    # Assurez-vous que la colonne de date est au bon format
-    df['transaction_date'] = pd.to_datetime(df['transaction_date'])
+def display_temporal_analysis():
+    """
+    Affiche un nuage de points des anomalies temporelles.
+    Chaque point représente une transaction anormale.
+    """
+    st.markdown('<h2 class="section-title">Analyse des Tendances Temporelles des Anomalies</h2>', unsafe_allow_html=True)
 
-    # Ajout d'une option pour choisir la granularité
-    granularity = st.selectbox(
-        "Sélectionnez la granularité pour l'analyse temporelle:",
-        ["Jour", "Semaine", "Mois"],
-        key="time_granularity"
+    # Récupération des données d'anomalies individuelles
+    anomalies_df = db_manager.fetch_individual_anomalies()
+
+    if anomalies_df.empty:
+        st.info("Aucune anomalie enregistrée dans la base de données pour l'analyse temporelle.")
+        return
+
+    # Convertir la colonne de date en format de date pour une meilleure visualisation
+    anomalies_df['anomaly_date'] = pd.to_datetime(anomalies_df['anomaly_date'])
+
+    # Création du nuage de points
+    fig = px.scatter(
+        anomalies_df,
+        x='anomaly_date',
+        y='anomaly_score',
+        color_discrete_sequence=['#e53e3e'],
+        hover_data={
+            'transaction_id': True,
+            'anomaly_date': '|%Y-%m-%d %H:%M:%S',
+            'intrbk_sttlm_amt': ':.2f',
+            'anomaly_score': ':.2f',
+        },
+        title="Anomalies par date et score",
+        labels={
+            'anomaly_date': 'Date de l\'anomalie',
+            'anomaly_score': 'Score d\'anomalie'
+        }
     )
 
-    if granularity == "Jour":
-        freq = 'D'
-        title_text = 'Nombre d\'anomalies par jour'
-    elif granularity == "Semaine":
-        freq = 'W'
-        title_text = 'Nombre d\'anomalies par semaine'
-    else: # Mois
-        freq = 'M'
-        title_text = 'Nombre d\'anomalies par mois'
-
-    # Préparation des données pour le graphique
-    temporal_data = df[df['is_anomaly']].copy()
-    temporal_count = temporal_data.set_index('transaction_date').resample(freq).size().reset_index(name='nombre_anomalies')
-
-    # Création du graphique à barres
-    fig = px.bar(
-        temporal_count,
-        x='transaction_date',
-        y='nombre_anomalies',
-        title=title_text,
-        labels={'transaction_date': granularity, 'nombre_anomalies': 'Nombre d\'anomalies'},
-        color_discrete_sequence=['#e53e3e']
-    )
-
-    # Mise à jour du style du graphique
+    # Mise à jour du layout pour un thème sombre
     fig.update_layout(
         plot_bgcolor='rgba(0,0,0,0)',
         paper_bgcolor='rgba(74,85,104,0.8)',
         font_color='#f7fafc',
         title_font_size=16,
-        xaxis=dict(showgrid=False),
-        yaxis=dict(showgrid=True, gridcolor='#606f86')
+        title_font_color='#f7fafc',
+        xaxis_title="Date de l'anomalie",
+        yaxis_title="Score d'anomalie",
+        xaxis=dict(
+            tickformat="%Y-%m-%d",
+            showgrid=True,
+            gridcolor='#606f86'
+        ),
+        yaxis=dict(
+            showgrid=True,
+            gridcolor='#606f86'
+        )
     )
 
     st.plotly_chart(fig, use_container_width=True)
+    
 
 def display_transaction_details(df):
     """
@@ -489,7 +498,7 @@ with tab2:
         st.markdown("---")
         display_geographical_analysis(st.session_state.df_combined)
         st.markdown("---")
-        display_temporal_analysis(st.session_state.df_combined)
+        display_temporal_analysis()
         st.markdown("---")
     else:
         st.warning("Veuillez d'abord uploader un fichier XML dans l'onglet 'Upload XML'.")
@@ -508,43 +517,74 @@ with tab3:
 # ==============================================================================
 with tab4:
     if st.session_state.df_combined is not None:
-        st.markdown('<h2 class="section-title">Générer et envoyer un rapport</h2>', unsafe_allow_html=True)
+        st.markdown('<h2 class="section-title">Générer et télécharger les rapports</h2>', unsafe_allow_html=True)
         
-        st.info("Ce rapport contient une analyse complète de toutes les transactions importées.")
+        st.info("Ces rapports contiennent une analyse complète de toutes les transactions importées.")
 
-        # Bouton pour générer et télécharger le rapport PDF
-        if st.button("Télécharger le rapport PDF", key="download_pdf_button"):
+        # --- Section pour le rapport PDF ---
+        st.markdown("<h4>Rapport d'analyse (PDF)</h4>", unsafe_allow_html=True)
+        st.write("Ce rapport est idéal pour une vue d'ensemble et une présentation.")
+        if st.button("Générer le rapport PDF", key="generate_pdf_button", use_container_width=True):
             with st.spinner("Génération du rapport PDF..."):
                 pdf_path = ReportGenerator.generate_pdf(st.session_state.df_combined, title="Rapport d'analyse de transactions")
                 with open(pdf_path, "rb") as f:
                     st.download_button(
-                        label="⬇️ Télécharger le rapport",
+                        label="⬇️ Télécharger le rapport PDF",
                         data=f,
                         file_name="rapport_analyse_transactions.pdf",
-                        mime="application/pdf"
+                        mime="application/pdf",
+                        key="download_pdf_final",
+                        use_container_width=True
                     )
-        
-        st.markdown("---")
 
+        st.markdown("---") # Séparateur visuel
+
+        # --- Section pour le fichier Parquet ---
+        st.markdown("<h4>Données pour Power BI (Parquet)</h4>", unsafe_allow_html=True)
+        st.write("Le fichier Parquet est optimisé pour les outils de BI comme Power BI.")
+        if st.button("Générer les données Parquet", key="generate_parquet_button", use_container_width=True):
+            with st.spinner("Génération du fichier Parquet..."):
+                try:
+                    import pyarrow
+                except ImportError:
+                    st.error("La bibliothèque 'pyarrow' n'est pas installée. Veuillez l'installer avec 'pip install pyarrow' pour générer le fichier Parquet.")
+                    st.stop()
+                    
+                import io
+                parquet_buffer = io.BytesIO()
+                st.session_state.df_combined.to_parquet(parquet_buffer, index=False)
+                parquet_buffer.seek(0)
+                
+                st.download_button(
+                    label="⬇️ Télécharger le fichier Parquet",
+                    data=parquet_buffer,
+                    file_name="transactions_data.parquet",
+                    mime="application/octet-stream",
+                    key="download_parquet_final",
+                    use_container_width=True
+                )
+
+        st.markdown("---") # Séparateur visuel
+
+        # --- Section pour l'envoi par email ---
         st.markdown('<h2 class="section-title">Envoyer le rapport par email</h2>', unsafe_allow_html=True)
-
         st.info("Cette fonctionnalité vous permet d'envoyer le rapport par email. Entrez une adresse email ci-dessous et cliquez sur 'Envoyer'.")
         
         email = st.text_input("Adresse email du destinataire:", key="email_input")
         
-        if st.button("Envoyer par mail", key="send_email_button"):
+        if st.button("Envoyer par mail", key="send_email_button", use_container_width=True):
             if email:
-                # Appel de la fonction d'envoi d'email
-                pdf_path = ReportGenerator.generate_pdf(st.session_state.df_combined)
-                if send_email_with_report(
-                    to_email=email,
-                    report_path=pdf_path,
-                    subject="Rapport d'analyse de fraude bancaire",
-                    body="Bonjour,\n\nVeuillez trouver ci-joint le rapport d'analyse de fraude bancaire généré par l'application Streamlit."
-                ):
-                    st.success(f"✅ Le rapport a été envoyé avec succès à **{email}** !")
-                else:
-                    st.error(f"❌ Échec de l'envoi du rapport à {email}.")
+                with st.spinner("Envoi de l'email en cours..."):
+                    pdf_path = ReportGenerator.generate_pdf(st.session_state.df_combined)
+                    if send_email_with_report(
+                        to_email=email,
+                        report_path=pdf_path,
+                        subject="Rapport d'analyse de fraude bancaire",
+                        body="Bonjour,\n\nVeuillez trouver ci-joint le rapport d'analyse de fraude bancaire généré par l'application Streamlit."
+                    ):
+                        st.success(f"✅ Le rapport a été envoyé avec succès à **{email}** !")
+                    else:
+                        st.error(f"❌ Échec de l'envoi du rapport à {email}. Veuillez vérifier la configuration de l'envoi d'emails.")
             else:
                 st.warning("Veuillez entrer une adresse email valide.")
 

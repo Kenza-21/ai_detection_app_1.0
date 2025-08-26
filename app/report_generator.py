@@ -8,6 +8,7 @@ from datetime import datetime
 import plotly.express as px
 import io
 from PIL import Image as PIL_Image
+from db_operations import db_manager # Import pour accéder à la base de données
 
 class ReportGenerator:
     @staticmethod
@@ -148,9 +149,18 @@ class ReportGenerator:
         story.append(Spacer(1, 0.2 * inch))
         story.append(bar_img)
         story.append(Spacer(1, 0.2 * inch))
+        
+        # 4. Nouveau graphique pour l'analyse temporelle
+        story.append(Paragraph("Analyse des Tendances Temporelles des Anomalies", section_style))
+        temporal_graph_image = ReportGenerator._generate_temporal_analysis_graph()
+        if temporal_graph_image:
+            story.append(temporal_graph_image)
+            story.append(Spacer(1, 0.2 * inch))
+        else:
+            story.append(Paragraph("Aucune donnée d'anomalie disponible pour l'analyse temporelle.", normal_style))
+        
 
-
-        # 4. Transactions suspectes détaillées
+        # 5. Transactions suspectes détaillées
         story.append(Paragraph("Transactions Suspectes Détaillées", section_style))
         
         if suspicious_transactions.empty:
@@ -186,3 +196,55 @@ class ReportGenerator:
 
         doc.build(story)
         return "rapport.pdf"
+
+    @staticmethod
+    def _generate_temporal_analysis_graph():
+        """
+        Génère le graphique d'analyse temporelle des anomalies à partir de la base de données.
+        """
+        anomalies_df = db_manager.fetch_individual_anomalies()
+
+        if anomalies_df.empty:
+            return None
+
+        anomalies_df['anomaly_date'] = pd.to_datetime(anomalies_df['anomaly_date'])
+
+        fig = px.scatter(
+            anomalies_df,
+            x='anomaly_date',
+            y='anomaly_score',
+            color_discrete_sequence=['#e53e3e'],
+            hover_data={
+                'transaction_id': True,
+                'anomaly_date': '|%Y-%m-%d %H:%M:%S',
+                'intrbk_sttlm_amt': ':.2f',
+                'anomaly_score': ':.2f',
+            },
+            title="Anomalies par date et score",
+            labels={
+                'anomaly_date': 'Date de l\'anomalie',
+                'anomaly_score': 'Score d\'anomalie'
+            }
+        )
+        
+        fig.update_layout(
+            plot_bgcolor='rgba(0,0,0,0)',
+            paper_bgcolor='rgba(0,0,0,0)',
+            font_color='#1a202c',
+            title_font_size=16,
+            xaxis_title="Date de l'anomalie",
+            yaxis_title="Score d'anomalie",
+            xaxis=dict(
+                tickformat="%Y-%m-%d",
+                showgrid=True,
+                gridcolor='#e2e8f0'
+            ),
+            yaxis=dict(
+                showgrid=True,
+                gridcolor='#e2e8f0'
+            )
+        )
+
+        buf = io.BytesIO()
+        fig.write_image(buf, format='png', width=700, height=400, scale=2)
+        return Image(buf, width=5.5*inch, height=3.5*inch)
