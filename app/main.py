@@ -10,6 +10,7 @@ from report_generator import ReportGenerator
 from db_operations import db_manager
 import os
 from email_sender import send_email_with_report
+from customization import show_customization_tab
 
 # Configuration de la page
 st.set_page_config(
@@ -19,17 +20,32 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Utilisation d'un fichier CSS externe pour le style
+#col_nav_logo, col_nav_space = st.columns([10, 10])
+
+#with col_nav_logo:
+    #st.image("app/style/logo_E.png", width=250)
+
+
+st.markdown("---")
+
+
 try:
     with open("app/style/styles.css") as f:
         st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 except FileNotFoundError:
-    st.error("Le fichier de style 'style/styles.css' est introuvable. Veuillez vous assurer qu'il se trouve bien dans un dossier 'style' à la racine de votre projet.")
+    st.error("Le fichier de style 'app/style/styles.css' est introuvable. Veuillez vous assurer qu'il se trouve bien dans un dossier 'app/style' à la racine de votre projet.")
 
 # Import de la police Inter depuis Google Fonts
 st.markdown("""
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 """, unsafe_allow_html=True)
+
+
+
+with st.sidebar:
+    
+    st.markdown("---")
+
 
 # Initialisation de la session state
 if "df_combined" not in st.session_state:
@@ -174,7 +190,6 @@ def display_geographical_analysis(df):
             showlegend=False
         ))
     
-    # Ajout des points pour les débiteurs et créanciers
     fig.add_trace(go.Scattergeo(
         lon = points_df[points_df['type'] == 'Débiteur']['lon'],
         lat = points_df[points_df['type'] == 'Débiteur']['lat'],
@@ -446,12 +461,14 @@ def process_uploaded_file(uploaded_file, file_index=None):
 # ==============================================================================
 # 🏗️ STRUCTURE PRINCIPALE DE L'APPLICATION AVEC ONGLET
 # ==============================================================================
+# --- En-tête de l'application (sous le logo) ---
 st.markdown("""
 <div class="main-header">
     <h1>Système de Détection de Fraude Bancaire</h1>
     <p>Analyse intelligente des fichiers PACS.008 • Détection d'anomalies en temps réel</p>
 </div>
 """, unsafe_allow_html=True)
+
 
 # -- Navigation par onglets --
 tab1, tab2, tab3, tab4 = st.tabs(["Upload XML", "Tableau de Bord", "Transactions", "Rapports"])
@@ -590,3 +607,30 @@ with tab4:
 
     else:
         st.warning("Veuillez d'abord uploader un fichier XML dans l'onglet 'Upload XML'.")
+        
+        
+# --- Contenu de la barre latérale ---
+with st.sidebar:
+    st.markdown("---")
+    st.markdown('<h3 style="text-align: center;">Personnalisation des Regles</h3>', unsafe_allow_html=True)
+    show_customization_tab() # Appel à la fonction pour afficher l'UI de personnalisation
+    st.markdown("---")
+    st.markdown(
+        """
+        <div style="text-align: center; color: #888; font-size: 12px; margin-top: 20px;">
+            <p>Application de détection de fraude bancaire </p>
+            <p>Version 1.0 | © 2024</p>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+# --- Footer ---
+st.markdown("""
+<div class="footer-container">
+    <h4>Système de Détection de Fraude Bancaire</h4>
+    <p>© 2025 Tous droits réservés.</p>
+    <p>Conforme aux normes PACS.008 </p>
+ 
+</div>
+
+""", unsafe_allow_html=True)

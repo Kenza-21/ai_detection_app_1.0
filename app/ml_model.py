@@ -5,6 +5,7 @@ import os
 import pandas as pd
 import numpy as np
 import logging
+from customization import get_custom_rules
 
 # Configuration du logging
 logging.basicConfig(level=logging.INFO)
@@ -16,10 +17,7 @@ MODEL_PATH = os.path.join(MODEL_DIR, "isolation_forest_v1.joblib")
 SCALER_PATH = os.path.join(MODEL_DIR, "scaler_v1.joblib")
 
 # Listes noires et règles métier
-BLACKLIST_COUNTRIES = {'NG', 'TR', 'RU', 'UA', 'PK', 'IN', 'CN', 'VN', 'BR', 'CO'}
-BLACKLIST_CITIES = {'Lagos', 'Istanbul', 'Moscow', 'Kyiv', 'Karachi',
-                   'Mumbai', 'Beijing', 'Ho Chi Minh City', 'Rio de Janeiro', 'Bogota'}
-INTERNATIONAL_DISTANCE_THRESHOLD = 1000000
+
 
 NATIONAL_BANKS = {
     'MA': {
@@ -137,6 +135,15 @@ class FraudModel:
         return df
 
     def apply_business_rules(self, df):
+        rules = get_custom_rules()
+
+    # Utilise les règles chargées
+        BLACKLIST_COUNTRIES = set(rules.get('BLACKLIST_COUNTRIES', []))
+        BLACKLIST_CITIES = set(rules.get('BLACKLIST_CITIES', []))
+        INTERNATIONAL_DISTANCE_THRESHOLD = rules.get('INTERNATIONAL_DISTANCE_THRESHOLD', 1000000)
+        HIGH_AMOUNT_PERCENTILE = rules.get('HIGH_AMOUNT_PERCENTILE', 99)
+        RULE_BASED_SCORE_THRESHOLD = rules.get('RULE_BASED_SCORE_THRESHOLD', 1.5)
+        AI_SCORE_THRESHOLD = rules.get('AI_SCORE_THRESHOLD', 0.4)
         df.loc[:, 'rule_based_score'] = 0.0
         df.loc[:, 'rule_based_anomaly'] = False
         df.loc[:, 'is_international'] = (df['debtor_country'] != df['creditor_country']).astype(int)
@@ -242,6 +249,10 @@ class FraudModel:
     def explain_anomalies(self, df):
         if 'is_anomaly' not in df.columns:
             return df
+        
+        rules = get_custom_rules()
+        AI_SCORE_THRESHOLD = rules.get('AI_SCORE_THRESHOLD', 0.4)
+
 
         def get_reasons(row):
             reasons = []
@@ -250,12 +261,11 @@ class FraudModel:
             if row.get('ai_anomaly', 0) == 1:
                 reasons.append("Détection par le modèle AI (comportement inhabituel)")
 
-        # 1. Vérifier si le score normalisé du modèle d'IA est supérieur à un seuil.
-        # Un seuil de 40% (0.4) garantit que le message s'affiche pour un score de 40.5%.
+        
             if row.get('ai_score_normalized', 0) > 0.4:
               reasons.append("Détection par le modèle AI (comportement inhabituel)")
         
-        # 2. Ajouter les raisons basées sur les règles métier
+        
             if row.get('debtor_blacklisted', 0) or row.get('creditor_blacklisted', 0):
               reasons.append("Partie blacklistée (pays/ville)")
             if row.get('is_international', False) and row.get('distance_high', False):

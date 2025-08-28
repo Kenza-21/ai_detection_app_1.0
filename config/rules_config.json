@@ -1,0 +1,30 @@
+{
+    "BLACKLIST_COUNTRIES": [
+        "NG",
+        "TR",
+        "RU",
+        "UA",
+        "PK",
+        "IN",
+        "CN",
+        "VN",
+        "BR",
+        "CO"
+    ],
+    "BLACKLIST_CITIES": [
+        "Lagos",
+        "Istanbul",
+        "Moscow",
+        "Kyiv",
+        "Karachi",
+        "Mumbai",
+        "Beijing",
+        "Ho Chi Minh City",
+        "Rio De Janeiro",
+        "Bogota"
+    ],
+    "INTERNATIONAL_DISTANCE_THRESHOLD": 999999,
+    "HIGH_AMOUNT_PERCENTILE": 99,
+    "RULE_BASED_SCORE_THRESHOLD": 1.5,
+    "AI_SCORE_THRESHOLD": 0.4
+}

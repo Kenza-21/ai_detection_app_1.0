@@ -17,7 +17,7 @@ class DatabaseManager:
             "host": os.getenv("DB_HOST", "localhost"),
             "database": os.getenv("DB_NAME", "bank_fraud"),
             "user": os.getenv("DB_USER", "postgres"),
-            "password": os.getenv("DB_PASSWORD", "postgres"),
+            "password": os.getenv("DB_PASSWORD", "admin"),
             "port": os.getenv("DB_PORT", "5432"),
             "connect_timeout": 5
         }

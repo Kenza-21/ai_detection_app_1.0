@@ -325,3 +325,46 @@
 ::-webkit-scrollbar-thumb:hover {
     background: var(--secondary-color);
 }
+.footer-container {
+    background: linear-gradient(135deg, #1a202c 0%, #2d3748 100%);
+    padding: 1.5rem 0;
+    margin-top: 3rem;
+    text-align: center;
+    width: 100%;
+    position: relative;
+    left: 0;
+    right: 0;
+}
+
+.footer-container h4 {
+    color: #fff;
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 0.75rem;
+    font-family: 'Inter', sans-serif;
+}
+
+.footer-container p {
+    color: #cbd5e0;
+    font-size: 0.9rem;
+    margin: 0.4rem 0;
+    line-height: 1.5;
+    font-family: 'Inter', sans-serif;
+}
+
+.footer-container p:last-child {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    color: #a0aec0;
+    font-size: 0.8rem;
+}
+
+/* Supprimer les espaces sur les côtés */
+.stApp > footer {
+    visibility: hidden;
+}
+
+/* Assurer que le contenu principal ne dépasse pas */
+.main .block-container {
+    padding-bottom: 2rem;
+}
