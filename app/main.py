@@ -20,10 +20,10 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-#col_nav_logo, col_nav_space = st.columns([10, 10])
+col_nav_logo, col_nav_space = st.columns([10, 10])
 
-#with col_nav_logo:
-    #st.image("app/style/logo_E.png", width=250)
+with col_nav_logo:
+    st.image("app/style/logo_E.png", width=250)
 
 
 st.markdown("---")

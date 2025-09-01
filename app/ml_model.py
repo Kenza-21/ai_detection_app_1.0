@@ -5,7 +5,8 @@ import os
 import pandas as pd
 import numpy as np
 import logging
-from customization import get_custom_rules
+from  customization import get_custom_rules
+from  geo_utils import geocode_and_get_postcode # Ajoutez cette ligne
 
 # Configuration du logging
 logging.basicConfig(level=logging.INFO)
@@ -36,25 +37,6 @@ NATIONAL_BANKS = {
     },
 }
 
-POSTAL_CODE_RULES = {
-    'MA': {
-        'Casablanca': ['20***'],
-        'Rabat': ['10***'],
-        'Marrakech': ['40***'],
-        'Fès': ['30***'],
-        'Tanger': ['90***'],
-        'Agadir': ['80***'],
-        'Oujda': ['60***'],
-    },
-    'FR': {
-        'Paris': ['75***'],
-        'Marseille': ['13***'],
-        'Lyon': ['69***'],
-        'Toulouse': ['31***'],
-        'Nice': ['06***'],
-        'Bordeaux': ['33***'],
-    }
-}
 
 def normalize_city_name(city):
     """Normalise le nom de la ville pour la correspondance"""
@@ -73,21 +55,7 @@ def normalize_city_name(city):
     }
     return variations.get(city, city.title())
 
-def check_postal_code(postal_code, city, country):
-    """Vérifie la cohérence entre code postal, ville et pays"""
-    if country not in POSTAL_CODE_RULES:
-        return False
-    normalized_city = normalize_city_name(city)
-    if normalized_city not in POSTAL_CODE_RULES[country]:
-        return False
-    postal_code = str(postal_code).strip()
-    for pattern in POSTAL_CODE_RULES[country][normalized_city]:
-        if pattern.endswith('***'):
-            if postal_code.startswith(pattern.replace('*', '')):
-                return True
-        elif postal_code == pattern:
-            return True
-    return False
+
 
 class FraudModel:
     def __init__(self, some_param=None):
@@ -173,26 +141,35 @@ class FraudModel:
 
         # Postal
         df.loc[:, 'postal_incoherence'] = False
-        if 'debtor_postcode' in df.columns and 'debtor_city' in df.columns:
-            mask_debtor = df['debtor_country'].isin(POSTAL_CODE_RULES.keys())
-            indices_debtor = df[mask_debtor].index
-            df.loc[indices_debtor, 'postal_incoherence_debtor'] = ~df.loc[indices_debtor].apply(
-                lambda row: check_postal_code(row['debtor_postcode'], row['debtor_city'], row['debtor_country']),
+        if 'debtor_postcode' in df.columns and 'debtor_city' in df.columns and 'debtor_country' in df.columns:
+            df.loc[:, 'expected_postcode_debtor'] = df.apply(
+                lambda row: geocode_and_get_postcode(row['debtor_city'], row['debtor_country']),
                 axis=1
             )
-        if 'creditor_postcode' in df.columns and 'creditor_city' in df.columns:
-            mask_creditor = df['creditor_country'].isin(POSTAL_CODE_RULES.keys())
-            indices_creditor = df[mask_creditor].index
-            df.loc[indices_creditor, 'postal_incoherence_creditor'] = ~df.loc[indices_creditor].apply(
-                lambda row: check_postal_code(row['creditor_postcode'], row['creditor_city'], row['creditor_country']),
+            # Ajout de l'affichage dans le terminal
+            for index, row in df.iterrows():
+                print(f"Débiteur: Ville : {row['debtor_city']}, Code postal attendu : {row['expected_postcode_debtor']}")
+            
+            df.loc[:, 'postal_incoherence_debtor'] = ~df.apply(
+                lambda row: str(row['debtor_postcode']).strip() == str(row['expected_postcode_debtor']).strip(),
                 axis=1
             )
-        df.loc[:, 'postal_incoherence'] = (
-            df.get('postal_incoherence_debtor', False) | 
-            df.get('postal_incoherence_creditor', False)
-        )
-        df.loc[df['postal_incoherence'], 'rule_based_score'] += 0.5
+            df.loc[df['postal_incoherence_debtor'].fillna(False), 'rule_based_score'] += 0.5
 
+        if 'creditor_postcode' in df.columns and 'creditor_city' in df.columns and 'creditor_country' in df.columns:
+            df.loc[:, 'expected_postcode_creditor'] = df.apply(
+                lambda row: geocode_and_get_postcode(row['creditor_city'], row['creditor_country']),
+                axis=1
+            )
+            # Ajout de l'affichage dans le terminal
+            for index, row in df.iterrows():
+                print(f"Créancier: Ville : {row['creditor_city']}, Code postal attendu : {row['expected_postcode_creditor']}")
+
+            df.loc[:, 'postal_incoherence_creditor'] = ~df.apply(
+                lambda row: str(row['creditor_postcode']).strip() == str(row['expected_postcode_creditor']).strip(),
+                axis=1
+            )
+            df.loc[df['postal_incoherence_creditor'].fillna(False), 'rule_based_score'] += 0.5
         # Banque / pays
         df.loc[:, 'bank_country_mismatch'] = False
         for country_code, banks in NATIONAL_BANKS.items():
@@ -258,13 +235,8 @@ class FraudModel:
             reasons = []
             
             # 1. Vérifier si le modèle d'IA a détecté une anomalie
-            if row.get('ai_anomaly', 0) == 1:
-                reasons.append("Détection par le modèle AI (comportement inhabituel)")
-
-        
-            if row.get('ai_score_normalized', 0) > 0.4:
-              reasons.append("Détection par le modèle AI (comportement inhabituel)")
-        
+            if row.get('ai_anomaly', 0) == 1 or row.get('ai_score_normalized', 0) > AI_SCORE_THRESHOLD:
+             reasons.append("Détection par le modèle AI (comportement inhabituel)")
         
             if row.get('debtor_blacklisted', 0) or row.get('creditor_blacklisted', 0):
               reasons.append("Partie blacklistée (pays/ville)")

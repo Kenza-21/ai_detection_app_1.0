@@ -99,3 +99,46 @@ def add_geo_features(df):
     except Exception as e:
         logger.error(f"Erreur dans add_geo_features: {str(e)}")
         raise
+    
+    
+# Ajoutez cette fonction dans geo_utils.py
+def geocode_and_get_postcode(city, country, retries=3):
+    """
+    Convertit une localisation (ville, pays) en coordonnées, puis trouve le code postal associé.
+    """
+    if pd.isna(country) or pd.isna(city) or not str(country).strip() or not str(city).strip():
+        print(f"La ville ou le pays est invalide: Ville: {city}, Pays: {country}")
+        return None
+
+    geolocator = Nominatim(user_agent="fraud_detection_app",timeout=10)
+    geocode = RateLimiter(geolocator.geocode, min_delay_seconds=1)
+    
+    location_str = f"{city}, {country}"
+    location = None
+
+    for attempt in range(retries):
+        try:
+            # Étape 1: Géocodage pour obtenir les coordonnées
+            location = geocode(location_str)
+            if location:
+                lat, lon = location.latitude, location.longitude
+                print(f"Ville: {city}, Pays: {country} -> Coordonnées: {lat}, {lon}")
+                
+                # Étape 2: Géocodage inversé pour trouver le code postal
+                reverse_location = geolocator.reverse((lat, lon), addressdetails=True, language='en')
+                if reverse_location and 'address' in reverse_location.raw and 'postcode' in reverse_location.raw['address']:
+                    postcode = reverse_location.raw['address']['postcode']
+                    print(f"Code postal trouvé pour {city}: {postcode}")
+                    return postcode
+                else:
+                    print(f"Échec de l'obtention du code postal pour les coordonnées {lat}, {lon}")
+                    return None
+            else:
+                print(f"Échec du géocodage pour {location_str}")
+                return None
+        except (GeocoderTimedOut, GeocoderServiceError) as e:
+            if attempt == retries - 1:
+                logger.warning(f"Échec du géocodage pour {location_str}: {str(e)}")
+            time.sleep(1)
+    
+    return None
