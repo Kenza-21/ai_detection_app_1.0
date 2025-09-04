@@ -6,7 +6,7 @@ import pandas as pd
 import numpy as np
 import logging
 from  customization import get_custom_rules
-from  geo_utils import geocode_and_get_postcode # Ajoutez cette ligne
+from  geo_utils import geocode_and_get_postcode 
 
 # Configuration du logging
 logging.basicConfig(level=logging.INFO)
@@ -219,8 +219,8 @@ class FraudModel:
 
         df.loc[:, 'rule_score_norm'] = df['rule_based_score'] / 3.5
         df.loc[:, 'ai_score_norm'] = (1 - df['ai_score']) / 2
-        df.loc[:, 'combined_score'] = 0.5 * df['rule_score_norm'] + 0.5 * df['ai_score_norm']
-        df.loc[:, 'is_anomaly'] = (df['combined_score'] > 0.5) | (df['rule_based_anomaly']).astype(int)
+        df.loc[:, 'combined_score'] = 0.6 * df['rule_score_norm'] + 0.4 * df['ai_score_norm']
+        df.loc[:, 'is_anomaly'] = (df['combined_score'] > 1) | (df['rule_based_anomaly']).astype(int)
         return df.reset_index(drop=True)
 
     def explain_anomalies(self, df):

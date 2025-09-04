@@ -24,6 +24,7 @@ class DatabaseManager:
         self.connection = None
         self._init_db()
         self.upgrade_database()
+        self.update_databases()
 
     def _get_connection(self):
         """Établit une connexion à la base de données"""
@@ -345,6 +346,32 @@ class DatabaseManager:
         except Exception as e:
             logger.error(f"Error fetching individual anomalies: {e}")
             return pd.DataFrame()
-        
     
+    def update_databases(self):
+        """Initialise les tables de profil utilisateur si nécessaire"""
+        commands = [
+            """
+            ALTER TABLE users 
+            ADD COLUMN IF NOT EXISTS avatar_color VARCHAR(7) DEFAULT '#4F46E5',
+            ADD COLUMN IF NOT EXISTS phone_number VARCHAR(20),
+            ADD COLUMN IF NOT EXISTS department VARCHAR(50)
+            """
+        ]
+
+        conn = None
+        try:
+            conn = self._get_connection()
+            with conn.cursor() as cursor:
+                for command in commands:
+                    cursor.execute(command)
+            conn.commit()
+            return True
+        except Exception as e:
+            import streamlit as st
+            st.error(f"Erreur lors de l'initialisation des tables de profil: {e}")
+            return False
+        finally:
+            if conn:
+                conn.close()
+                self.conn = None  
 db_manager = DatabaseManager()

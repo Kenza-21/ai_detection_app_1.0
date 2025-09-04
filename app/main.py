@@ -11,6 +11,37 @@ from db_operations import db_manager
 import os
 from email_sender import send_email_with_report
 from customization import show_customization_tab
+from auth import check_authentication, show_login_register, logout
+from profile import show_auth_card, get_avatar_initials,get_avatar_color,show_user_profile_menu, show_profile_tab, show_edit_profile
+
+
+
+
+
+# Vérification de l'authentification
+# Remplacer toute la section de vérification d'authentification par:
+if not check_authentication():
+    # Afficher la carte d'authentification
+    col_nav_logo, col_nav_space = st.columns([10, 10])
+    with col_nav_logo:
+        st.image("app/style/logo_E.png", width=250)
+    
+    st.markdown("---")
+    show_auth_card()
+    st.stop()
+    
+    st.markdown("---")
+    st.markdown("""
+    <div class="main-header">
+        <h1>Système de Détection de Fraude Bancaire</h1>
+        <p>Veuillez vous connecter ou créer un compte pour accéder à l'application</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    show_login_register()
+    st.stop()
+
+
 
 # Configuration de la page
 st.set_page_config(
@@ -54,6 +85,13 @@ if "all_xml_contents" not in st.session_state:
     st.session_state.all_xml_contents = []
 if "all_dfs" not in st.session_state:
     st.session_state.all_dfs = []
+    
+# Ajouter l'initialisation de selected_page
+if "selected_page" not in st.session_state:
+    st.session_state.selected_page = "Upload XML"
+if "editing_profile" not in st.session_state:
+    st.session_state.editing_profile = False    
+    
     
 def display_transaction_summary(df):
     """Affiche un résumé des transactions avec design moderne"""
@@ -459,7 +497,7 @@ def process_uploaded_file(uploaded_file, file_index=None):
         return None, None
 
 # ==============================================================================
-# 🏗️ STRUCTURE PRINCIPALE DE L'APPLICATION AVEC ONGLET
+# 🏗️ STRUCTURE PRINCIPALE DE L'APPLICATION AVEC MENU LATÉRAL
 # ==============================================================================
 # --- En-tête de l'application (sous le logo) ---
 st.markdown("""
@@ -470,13 +508,82 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 
-# -- Navigation par onglets --
-tab1, tab2, tab3, tab4 = st.tabs(["Upload XML", "Tableau de Bord", "Transactions", "Rapports"])
+    
 
+
+with st.sidebar:
+   
+    if 'user' in st.session_state:
+        user = st.session_state.user
+        avatar_initials = get_avatar_initials(user.get('full_name', ''))
+        avatar_color = get_avatar_color(user.get('username', ''))
+        
+        # Utilisez des colonnes pour aligner l'avatar et le bouton de paramètres
+        col_avatar, col_settings_btn = st.columns([0.8, 0.2])
+        
+        with col_avatar:
+            st.markdown(f"""
+            <div style="text-align: center; margin-bottom: 2rem;">
+                <div style="width: 100px; height: 100px; border-radius: 50%; 
+                            background: {avatar_color}; display: flex; align-items: center; 
+                            justify-content: center; color: white; font-weight: 600; font-size: 1.5rem;
+                            margin: 0 auto; border: 3px solid #4a5568; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                            transition: transform 0.3s ease, box-shadow 0.3s ease;">
+                    {avatar_initials}
+                </div>
+                <h3 style="color: #f7fafc; margin-top: 0.5rem; margin-bottom: 0.25rem;">{user.get('full_name', 'Utilisateur')}</h3>
+                <p style="color: #a0aec0; margin: 0; font-size: 0.9rem;">{user.get('role', 'Utilisateur')}</p>
+            </div>
+            """, unsafe_allow_html=True)
+
+        with col_settings_btn:
+    # Utilisation d'un bouton avec style minimal pour n'afficher que l'emoji
+            if st.button("⚙️", key="settings_emoji_button", help="Aller à la personnalisation", use_container_width=False):
+             st.session_state.selected_page = "Personnalisation"
+             st.rerun()
+             
+
+    st.markdown("---")
+    
+    # point de navigation
+    pages = ["Upload XML", "Tableau de Bord", "Transactions", "Rapports", "Profil"]
+
+    st.markdown("---")
+    st.markdown("<h3 style='color:#f7fafc; margin-bottom: 1rem;'>Navigation</h3>", unsafe_allow_html=True)
+
+    # Initialiser la page sélectionnée
+    if "selected_page" not in st.session_state:
+        st.session_state.selected_page = pages[0]
+
+    
+    st.markdown("""
+    <style>
+    .stButton > button:focus {
+        background-color: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%) !important;  /* Couleur de fond */
+        color: #f7fafc !important;
+        font-weight: 500 !important;
+        border: 0px solid #334155 !important;
+        box-shadow: 0 0 10px #fb923c;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+    # Création des boutons de navigation
+    for p in pages:
+        if st.button(p, key=f"sidebar_{p}", use_container_width=True):
+            st.session_state.selected_page = p
+            
+
+    
+
+    
+    
+    
+    
 # ==============================================================================
-# 📤 ONGLET 1 - UPLOAD XML
+#  Afficher le contenu de la page sélectionnée
 # ==============================================================================
-with tab1:
+if st.session_state.selected_page == "Upload XML":
     st.markdown('<h2 class="section-title">Uploader des Fichiers XML</h2>', unsafe_allow_html=True)
     st.markdown("""
     <div style="text-align: center; padding: 2rem 1rem; color: var(--text-secondary); border: 2px dashed rgba(255,255,255,0.2); border-radius: var(--border-radius); margin-bottom: 2rem;">
@@ -504,10 +611,7 @@ with tab1:
             st.success(f"{len(all_dfs)} fichier(s) XML traité(s) avec succès")
             st.info("Naviguez vers les autres onglets pour visualiser les résultats.")
 
-# ==============================================================================
-# 📊 ONGLET 2 - TABLEAU DE BORD (DASHBOARD)
-# ==============================================================================
-with tab2:
+elif st.session_state.selected_page == "Tableau de Bord":
     if st.session_state.df_combined is not None:
         display_transaction_summary(st.session_state.df_combined)
         st.markdown("---")
@@ -518,21 +622,15 @@ with tab2:
         display_temporal_analysis()
         st.markdown("---")
     else:
-        st.warning("Veuillez d'abord uploader un fichier XML dans l'onglet 'Upload XML'.")
+        st.warning("Veuillez d'abord uploader un fichier XML dans la page 'Upload XML'.")
 
-# ==============================================================================
-# 📋 ONGLET 3 - TRANSACTIONS
-# ==============================================================================
-with tab3:
+elif st.session_state.selected_page == "Transactions":
     if st.session_state.df_combined is not None:
         display_transaction_details(st.session_state.df_combined)
     else:
-        st.warning("Veuillez d'abord uploader un fichier XML dans l'onglet 'Upload XML'.")
+        st.warning("Veuillez d'abord uploader un fichier XML dans la page 'Upload XML'.")
 
-# ==============================================================================
-# 📄 ONGLET 4 - RAPPORTS
-# ==============================================================================
-with tab4:
+elif st.session_state.selected_page == "Rapports":
     if st.session_state.df_combined is not None:
         st.markdown('<h2 class="section-title">Générer et télécharger les rapports</h2>', unsafe_allow_html=True)
         
@@ -553,7 +651,6 @@ with tab4:
                         key="download_pdf_final",
                         use_container_width=True
                     )
-
         st.markdown("---") # Séparateur visuel
 
         # --- Section pour le fichier Parquet ---
@@ -564,7 +661,7 @@ with tab4:
                 try:
                     import pyarrow
                 except ImportError:
-                    st.error("La bibliothèque 'pyarrow' n'est pas installée. Veuillez l'installer avec 'pip install pyarrow' pour générer le fichier Parquet.")
+                    st.error("La bibliothèque 'pyarrow' n'est pas installée.")
                     st.stop()
                     
                 import io
@@ -580,7 +677,6 @@ with tab4:
                     key="download_parquet_final",
                     use_container_width=True
                 )
-
         st.markdown("---") # Séparateur visuel
 
         # --- Section pour l'envoi par email ---
@@ -599,27 +695,59 @@ with tab4:
                         subject="Rapport d'analyse de fraude bancaire",
                         body="Bonjour,\n\nVeuillez trouver ci-joint le rapport d'analyse de fraude bancaire généré par l'application Streamlit."
                     ):
-                        st.success(f"✅ Le rapport a été envoyé avec succès à **{email}** !")
+                        st.success(f"Le rapport a été envoyé avec succès à **{email}** !")
                     else:
-                        st.error(f"❌ Échec de l'envoi du rapport à {email}. Veuillez vérifier la configuration de l'envoi d'emails.")
+                        st.error(f" Échec de l'envoi du rapport à {email}. Veuillez vérifier la configuration de l'envoi d'emails.")
             else:
                 st.warning("Veuillez entrer une adresse email valide.")
 
     else:
-        st.warning("Veuillez d'abord uploader un fichier XML dans l'onglet 'Upload XML'.")
+        st.warning("Veuillez d'abord uploader un fichier XML dans la page 'Upload XML'.")
+     
+elif st.session_state.selected_page == "Profil":
+    if 'editing_profile' in st.session_state and st.session_state.editing_profile:
+        show_edit_profile()
+    else:
+        show_profile_tab()
         
-        
+elif st.session_state.selected_page == "Personnalisation":
+    show_customization_tab()
+
+
+
+
+st.markdown("""
+    <style>
+    div.stButton > button[kind="primary"][key="logout_button"] {
+        background-color: red !important;
+        color: white !important;
+        border-radius: 8px;
+        border: none;
+        font-weight: bold;
+    }
+    div.stButton > button[kind="primary"][key="logout_button"]:hover {
+        background-color: darkred !important;
+        color: white !important;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+st.markdown("---")  
+with st.sidebar:
+        st.markdown("---")  
+        if st.button(" Déconnexion", key="logout_button", use_container_width=True):
+              logout()
+              st.rerun()  
+              st.markdown("---")      
 # --- Contenu de la barre latérale ---
 with st.sidebar:
-    st.markdown("---")
-    st.markdown('<h3 style="text-align: center;">Personnalisation des Regles</h3>', unsafe_allow_html=True)
-    show_customization_tab() # Appel à la fonction pour afficher l'UI de personnalisation
+   
     st.markdown("---")
     st.markdown(
         """
-        <div style="text-align: center; color: #888; font-size: 12px; margin-top: 20px;">
+        <div style="text-align: center; color: #888; font-size: 12px; margin-top: 20px;font-weight:100">
             <p>Application de détection de fraude bancaire </p>
-            <p>Version 1.0 | © 2024</p>
+            <p> © 2025</p>
         </div>
         """,
         unsafe_allow_html=True
