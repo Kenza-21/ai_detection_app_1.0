@@ -559,6 +559,25 @@
     /* Un gris très clair au survol */
     border-bottom: 2px solid #1a73e8; /* Ligne bleue au survol, indiquant l'interactivité */
 }
+/* Bouton spécifique st-emotion-cache-k008qs */
+.st-emotion-cache-k008qs button {
+    background: linear-gradient(135deg, var(--info-color) 0%, var(--secondary-color) 100%);
+    color: #1a73e8 !important;
+    border: none;
+    border-radius: var(--border-radius);
+    padding: 0.75rem 1.5rem;
+    font-weight: 600;
+    box-shadow: var(--shadow);
+    transition: var(--transition);
+    cursor: pointer;
+}
+
+/* Effet au survol */
+.st-emotion-cache-k008qs button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(49, 130, 206, 0.3);
+    background: linear-gradient(135deg, #3182ce 0%, #2c5282 100%);
+}
 
 /* Style de l'onglet sélectionné (si Streamlit ajoute une classe spécifique) */
 /* Remplacez `selected-tab` par la classe réelle si elle existe */
@@ -600,4 +619,50 @@ div[data-testid="stSidebar"] div.stButton button[key="settings_emoji_button"]:ho
 .st-emotion-cache-1cyexbd {
     border: none !important;
     box-shadow: none !important;
+}
+/* S
+/* Styling du conteneur global du DataFrame */
+div.stDataFrame {
+    background: #1e1e2d; /* Couleur de fond sombre et profonde */
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2); /* Une ombre plus prononcée pour la profondeur */
+    overflow: hidden; /* Assure que le contenu s'adapte au coin arrondi */
+    font-family: 'Segoe UI', 'Roboto', sans-serif; /* Utilisation de polices modernes */
+}
+
+/* En-têtes de colonnes */
+div.stDataFrame th {
+    background: linear-gradient(180deg, #3a3f5b, #2c314a); /* Dégradé de couleurs pour un effet 3D */
+    color: #e0e0e0; /* Couleur du texte légèrement plus claire */
+    font-weight: 700;
+    font-size: 0.9em;
+    padding: 12px 20px;
+    text-align: left;
+    border-bottom: 2px solid #5d5d81; /* Ligne de séparation plus élégante */
+}
+
+/* Cellules de données */
+div.stDataFrame td {
+    background-color: #2b2b40; /* Fond des cellules légèrement plus clair que le conteneur */
+    color: #c0c0c0; /* Texte des cellules */
+    padding: 12px 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05); /* Ligne de séparation très fine */
+    transition: background-color 0.3s ease; /* Animation douce pour le survol */
+}
+
+/* Alternance des lignes (effet 'zebra') pour une meilleure lisibilité */
+div.stDataFrame tr:nth-child(odd) td {
+    background-color: #242436; /* Une couleur légèrement différente pour les lignes impaires */
+}
+
+/* Survol des lignes (hover) */
+div.stDataFrame tbody tr:hover td {
+    background-color: #4a4e69; /* Surlignage élégant lors du survol */
+    cursor: pointer;
+}
+.st-emotion-cache-1anq8dj button{
+   color: rgb(255 161 75); 
+   user-select: none;
+    background-color: rgb(14, 17, 23);
+    border: 1px solid rgb(255 146 75 / 32%);
 }

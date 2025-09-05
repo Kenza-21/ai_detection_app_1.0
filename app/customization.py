@@ -115,3 +115,16 @@ def get_custom_rules():
     """Fetches custom rules from the config file or returns defaults."""
     rules = load_rules()
     return rules
+
+# Augmentez les seuils pour réduire les faux positifs
+def apply_custom_rules(df, rules_config):
+    df['rule_based_anomaly'] = 0
+    blacklist_countries = rules_config.get('BLACKLIST_COUNTRIES', [])
+    
+    # 🔼 AUGMENTER les seuils
+    df.loc[df['intrbk_sttlm_amt'] > 1000000, 'rule_based_anomaly'] = 1  # 1M au lieu de 500K
+    df.loc[df['creditor_country'].isin(blacklist_countries), 'rule_based_anomaly'] = 1
+    df.loc[(df['is_international'] == 1) & (df['intrbk_sttlm_amt'] > 250000), 'rule_based_anomaly'] = 1  # 250K au lieu de 100K
+    
+    df['final_anomaly'] = ((df['is_anomaly'] == 1) | (df['rule_based_anomaly'] == 1)).astype(int)
+    return df

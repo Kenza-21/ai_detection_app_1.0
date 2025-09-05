@@ -421,9 +421,15 @@ def show_profile_tab():
    
     
     st.markdown('</div>', unsafe_allow_html=True)  # Fin du conteneur
+# profile.py - Modification de la fonction show_edit_profile()
 def show_edit_profile():
     """Affiche le formulaire d'édition du profil"""
     user = st.session_state.user
+    
+    # Ajout d'un bouton "Revenir au profil" en haut du formulaire
+    if st.button("◀ Revenir au profil", key="back_to_profile_btn"):
+        st.session_state.editing_profile = False
+        st.rerun()
     
     with st.form("edit_profile_form"):
         full_name = st.text_input("Nom complet", value=user.get('full_name', ''), key="edit_full_name")
@@ -454,6 +460,7 @@ def show_edit_profile():
         with col2:
             if st.form_submit_button(" Annuler", use_container_width=True):
                 st.session_state.editing_profile = False
+                st.rerun()
     
     # Section changement de mot de passe
     st.markdown("---")
@@ -464,7 +471,7 @@ def show_edit_profile():
         new_password = st.text_input("Nouveau mot de passe", type="password", key="new_password")
         confirm_password = st.text_input("Confirmer le nouveau mot de passe", type="password", key="confirm_password")
         
-        if st.form_submit_button(" Changer le mot de passe", use_container_width=True):
+        if st.form_submit_button("🔒  Changer le mot de passe", use_container_width=True):
             if not current_password or not new_password or not confirm_password:
                 st.error("Veuillez remplir tous les champs")
             elif new_password != confirm_password:

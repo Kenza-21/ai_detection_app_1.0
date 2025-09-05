@@ -5,8 +5,8 @@ import os
 import pandas as pd
 import numpy as np
 import logging
-from  customization import get_custom_rules
-from  geo_utils import geocode_and_get_postcode 
+from customization import get_custom_rules
+from geo_utils import geocode_and_get_postcode
 
 # Configuration du logging
 logging.basicConfig(level=logging.INFO)
@@ -18,8 +18,6 @@ MODEL_PATH = os.path.join(MODEL_DIR, "isolation_forest_v1.joblib")
 SCALER_PATH = os.path.join(MODEL_DIR, "scaler_v1.joblib")
 
 # Listes noires et règles métier
-
-
 NATIONAL_BANKS = {
     'MA': {
         'ATTIJARIWAFA BANK': 'MA',
@@ -36,8 +34,34 @@ NATIONAL_BANKS = {
         'HSBC FRANCE': 'FR'
     },
 }
+# AJOUTEZ dans ml_model.py
+SECTOR_NORMS = {
+    'INDUSTRIEL': {'min': 50000, 'max': 20000000},  # 50K-20M
+    'DISTRIBUTION': {'min': 1000, 'max': 500000},   # 1K-500K
+    'TEXTILE': {'min': 5000, 'max': 1000000},       # 5K-1M
+    'SERVICES': {'min': 1000, 'max': 200000}        # 1K-200K
+}
 
+def is_amount_normal(amount, debtor_name, creditor_name):
+    """Vérifie si le montant est normal pour le secteur"""
+    # Détection du secteur basée sur le nom
+    sector = detect_sector(debtor_name, creditor_name)
+    norms = SECTOR_NORMS.get(sector, {'min': 1000, 'max': 1000000})
+    
+    return norms['min'] <= amount <= norms['max']
 
+def detect_sector(name1, name2):
+    """Détecte le secteur d'activité"""
+    name = (name1 + ' ' + name2).lower()
+    
+    if any(word in name for word in ['industr', 'atlas', 'matières', 'premières']):
+        return 'INDUSTRIEL'
+    elif any(word in name for word in ['distrib', 'ventes', 'commerce']):
+        return 'DISTRIBUTION'
+    elif any(word in name for word in ['textile', 'habillement']):
+        return 'TEXTILE'
+    else:
+        return 'SERVICES'
 def normalize_city_name(city):
     """Normalise le nom de la ville pour la correspondance"""
     if not isinstance(city, str):
@@ -55,12 +79,11 @@ def normalize_city_name(city):
     }
     return variations.get(city, city.title())
 
-
-
 class FraudModel:
     def __init__(self, some_param=None):
         os.makedirs(MODEL_DIR, exist_ok=True)
-        self.expected_features = ['intrbk_sttlm_amt', 'intrbk_sttlm_amt_log', 'is_international']
+        # CORRECTION: Utiliser les mêmes features que pendant l'entraînement
+        self.expected_features = ['intrbk_sttlm_amt_log', 'is_international', 'distance_km']
         self.model = self._load_model()
         self.scaler = self._load_scaler()
         self.some_param = some_param
@@ -100,25 +123,51 @@ class FraudModel:
                 raise ValueError("Colonne de montant manquante (instd_amt ou intrbk_sttlm_amt)")
         df['intrbk_sttlm_amt'] = df['intrbk_sttlm_amt'].fillna(0)
         df['intrbk_sttlm_amt_log'] = np.log1p(df['intrbk_sttlm_amt'].clip(lower=0) + 1e-6)
+        
+        # S'assurer que distance_km existe
+        if 'distance_km' not in df.columns:
+            logger.warning("Colonne distance_km manquante - création avec valeur par défaut 0")
+            df['distance_km'] = 0.0
+            
+        return df
+
+    def prepare_features_for_prediction(self, df):
+        """Prépare les features exactement comme pendant l'entraînement"""
+        df = self.standardize_amount_column(df)
+        
+        # S'assurer que toutes les features attendues sont présentes
+        for feature in self.expected_features:
+            if feature not in df.columns:
+                if feature == 'distance_km':
+                    df[feature] = 0.0  # Valeur par défaut
+                elif feature == 'is_international':
+                    df[feature] = (df.get('debtor_country', 'MA') != df.get('creditor_country', 'MA')).astype(int)
+                else:
+                    logger.warning(f"Feature {feature} manquante - tentative de calcul")
+        
         return df
 
     def apply_business_rules(self, df):
         rules = get_custom_rules()
 
-    # Utilise les règles chargées
+        # Utilise les règles chargées
         BLACKLIST_COUNTRIES = set(rules.get('BLACKLIST_COUNTRIES', []))
         BLACKLIST_CITIES = set(rules.get('BLACKLIST_CITIES', []))
         INTERNATIONAL_DISTANCE_THRESHOLD = rules.get('INTERNATIONAL_DISTANCE_THRESHOLD', 1000000)
         HIGH_AMOUNT_PERCENTILE = rules.get('HIGH_AMOUNT_PERCENTILE', 99)
         RULE_BASED_SCORE_THRESHOLD = rules.get('RULE_BASED_SCORE_THRESHOLD', 1.5)
         AI_SCORE_THRESHOLD = rules.get('AI_SCORE_THRESHOLD', 0.4)
+        
         df.loc[:, 'rule_based_score'] = 0.0
         df.loc[:, 'rule_based_anomaly'] = False
-        df.loc[:, 'is_international'] = (df['debtor_country'] != df['creditor_country']).astype(int)
+        
+        # Calculer is_international si pas déjà fait
+        if 'is_international' not in df.columns:
+            df.loc[:, 'is_international'] = (df['debtor_country'] != df['creditor_country']).astype(int)
 
         # Montants extrêmes
-        high_amount_threshold = df['intrbk_sttlm_amt'].quantile(0.99)
-        low_amount_threshold = df['intrbk_sttlm_amt'].quantile(0.01)
+        high_amount_threshold = df['intrbk_sttlm_amt'].quantile(0.99) if len(df) > 10 else 500000
+        low_amount_threshold = df['intrbk_sttlm_amt'].quantile(0.01) if len(df) > 10 else 10
         df.loc[:, 'extreme_amount'] = (df['intrbk_sttlm_amt'] > high_amount_threshold) | (df['intrbk_sttlm_amt'] < low_amount_threshold)
         df.loc[df['extreme_amount'], 'rule_based_score'] += 1
 
@@ -127,15 +176,14 @@ class FraudModel:
         df.loc[:, 'creditor_blacklisted'] = (df['creditor_country'].isin(BLACKLIST_COUNTRIES) | df['creditor_city'].isin(BLACKLIST_CITIES)).astype(int)
         df.loc[df['debtor_blacklisted'] | df['creditor_blacklisted'], 'rule_based_score'] += 1
 
-        # Transaction internationale
-        df.loc[:, 'is_international'] = (df['debtor_country'] != df['creditor_country'])
+        # Transaction internationale avec distance
         df.loc[:, 'distance_high'] = False
         if 'distance_km' in df.columns:
             df.loc[:, 'distance_high'] = (df['distance_km'] > INTERNATIONAL_DISTANCE_THRESHOLD)
         df.loc[df['is_international'] & df['distance_high'], 'rule_based_score'] += 1
 
         # Montant élevé
-        high_amount_threshold = df['intrbk_sttlm_amt'].quantile(0.97)
+        high_amount_threshold = df['intrbk_sttlm_amt'].quantile(0.97) if len(df) > 10 else 100000
         df.loc[:, 'amount_high'] = df['intrbk_sttlm_amt'] > high_amount_threshold
         df.loc[df['is_international'] & df['amount_high'], 'rule_based_score'] += 0.5
 
@@ -146,10 +194,6 @@ class FraudModel:
                 lambda row: geocode_and_get_postcode(row['debtor_city'], row['debtor_country']),
                 axis=1
             )
-            # Ajout de l'affichage dans le terminal
-            for index, row in df.iterrows():
-                print(f"Débiteur: Ville : {row['debtor_city']}, Code postal attendu : {row['expected_postcode_debtor']}")
-            
             df.loc[:, 'postal_incoherence_debtor'] = ~df.apply(
                 lambda row: str(row['debtor_postcode']).strip() == str(row['expected_postcode_debtor']).strip(),
                 axis=1
@@ -161,15 +205,12 @@ class FraudModel:
                 lambda row: geocode_and_get_postcode(row['creditor_city'], row['creditor_country']),
                 axis=1
             )
-            # Ajout de l'affichage dans le terminal
-            for index, row in df.iterrows():
-                print(f"Créancier: Ville : {row['creditor_city']}, Code postal attendu : {row['expected_postcode_creditor']}")
-
             df.loc[:, 'postal_incoherence_creditor'] = ~df.apply(
                 lambda row: str(row['creditor_postcode']).strip() == str(row['expected_postcode_creditor']).strip(),
                 axis=1
             )
             df.loc[df['postal_incoherence_creditor'].fillna(False), 'rule_based_score'] += 0.5
+        
         # Banque / pays
         df.loc[:, 'bank_country_mismatch'] = False
         for country_code, banks in NATIONAL_BANKS.items():
@@ -188,7 +229,7 @@ class FraudModel:
         df.loc[:, 'ai_anomaly'] = 0
         df.loc[:, 'ai_score_normalized'] = 0.0
 
-        df = self.standardize_amount_column(df)
+        df = self.prepare_features_for_prediction(df)
         valid, missing = self.validate_features(df)
         if not valid:
             logger.error(f"Features manquantes pour AI: {missing}")
@@ -213,14 +254,25 @@ class FraudModel:
         return df
 
     def detect_anomalies(self, df):
-        df = self.standardize_amount_column(df)
+        df = self.prepare_features_for_prediction(df)
         df = self.apply_business_rules(df)
         df = self.apply_ai_detection(df)
+        
+        df['sector_normal'] = df.apply(
+        lambda row: is_amount_normal(
+            row['intrbk_sttlm_amt'], 
+            row['debtor_name'], 
+            row['creditor_name']
+        ), axis=1
+    )
+        df.loc[df['sector_normal'], 'ai_anomaly'] = 0  # Reset AI anomaly
+        df.loc[df['sector_normal'], 'rule_based_anomaly'] = 0  # Reset rules anomaly
 
         df.loc[:, 'rule_score_norm'] = df['rule_based_score'] / 3.5
         df.loc[:, 'ai_score_norm'] = (1 - df['ai_score']) / 2
         df.loc[:, 'combined_score'] = 0.6 * df['rule_score_norm'] + 0.4 * df['ai_score_norm']
         df.loc[:, 'is_anomaly'] = (df['combined_score'] > 1) | (df['rule_based_anomaly']).astype(int)
+        df = self.explain_anomalies(df)
         return df.reset_index(drop=True)
 
     def explain_anomalies(self, df):
@@ -230,20 +282,18 @@ class FraudModel:
         rules = get_custom_rules()
         AI_SCORE_THRESHOLD = rules.get('AI_SCORE_THRESHOLD', 0.4)
 
-
         def get_reasons(row):
             reasons = []
             
-            # 1. Vérifier si le modèle d'IA a détecté une anomalie
             if row.get('ai_anomaly', 0) == 1 or row.get('ai_score_normalized', 0) > AI_SCORE_THRESHOLD:
-             reasons.append("Détection par le modèle AI (comportement inhabituel)")
-        
+                reasons.append("Détection par le modèle AI (comportement inhabituel)")
+            
             if row.get('debtor_blacklisted', 0) or row.get('creditor_blacklisted', 0):
-              reasons.append("Partie blacklistée (pays/ville)")
+                reasons.append("Partie blacklistée (pays/ville)")
             if row.get('is_international', False) and row.get('distance_high', False):
-              reasons.append("Transaction internationale à longue distance")
+                reasons.append("Transaction internationale à longue distance")
             if row.get('is_international', False) and row.get('amount_high', False):
-              reasons.append("Montant élevé pour transaction internationale")
+                reasons.append("Montant élevé pour transaction internationale")
             if row.get('extreme_amount', False):
                 reasons.append("Montant anormalement bas ou élevé")
             if row.get('postal_incoherence', False):
@@ -255,8 +305,9 @@ class FraudModel:
             return ", ".join(reasons)
 
         df.loc[:, 'anomaly_reasons'] = df.apply(get_reasons, axis=1)
-
-        # L'ancienne logique qui annulait la détection a été supprimée.
-        # Le modèle d'IA seul suffit désormais à marquer une transaction comme anormale.
-        
+        normal_mask = df['anomaly_reasons'] == "Transaction normale"
+        df.loc[normal_mask, 'is_anomaly'] = 0
+        df.loc[normal_mask, 'rule_based_anomaly'] = 0
+        df.loc[normal_mask, 'ai_anomaly'] = 0
+        df.loc[normal_mask, 'combined_score'] = 0  # Score à 0 pour les transactions normales
         return df.reset_index(drop=True)

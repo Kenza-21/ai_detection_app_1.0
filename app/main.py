@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+
 import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime
@@ -14,7 +15,7 @@ from customization import show_customization_tab
 from auth import check_authentication, show_login_register, logout
 from profile import show_auth_card, get_avatar_initials,get_avatar_color,show_user_profile_menu, show_profile_tab, show_edit_profile
 
-
+from admin_dashboard import show_admin_dashboard
 
 
 
@@ -537,24 +538,27 @@ with st.sidebar:
             """, unsafe_allow_html=True)
 
         with col_settings_btn:
+            if user.get('role') == 'admin':
     # Utilisation d'un bouton avec style minimal pour n'afficher que l'emoji
-            if st.button("⚙️", key="settings_emoji_button", help="Aller à la personnalisation", use_container_width=False):
-             st.session_state.selected_page = "Personnalisation"
-             st.rerun()
-             
+              if st.button("⚙️", key="settings_emoji_button", help="Aller à la personnalisation", use_container_width=False):
+                  st.session_state.selected_page = "Personnalisation"
+                  st.rerun()
 
     st.markdown("---")
     
     # point de navigation
     pages = ["Upload XML", "Tableau de Bord", "Transactions", "Rapports", "Profil"]
-
+    if user.get('role') == 'admin':
+        pages.append("Admin Dashboard")
+        pages.append("Personnalisation") 
     st.markdown("---")
     st.markdown("<h3 style='color:#f7fafc; margin-bottom: 1rem;'>Navigation</h3>", unsafe_allow_html=True)
 
     # Initialiser la page sélectionnée
     if "selected_page" not in st.session_state:
         st.session_state.selected_page = pages[0]
-
+    # Plus loin dans le code, ajouter la gestion de cette nouvelle page:
+    
     
     st.markdown("""
     <style>
@@ -578,7 +582,8 @@ with st.sidebar:
 
     
     
-    
+if st.session_state.selected_page == "Admin Dashboard":
+       show_admin_dashboard()  
     
 # ==============================================================================
 #  Afficher le contenu de la page sélectionnée
@@ -711,7 +716,8 @@ elif st.session_state.selected_page == "Profil":
         show_profile_tab()
         
 elif st.session_state.selected_page == "Personnalisation":
-    show_customization_tab()
+    if user.get('role') == 'admin':
+      show_customization_tab()
 
 
 

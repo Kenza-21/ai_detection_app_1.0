@@ -1,15 +1,8 @@
 {
     "BLACKLIST_COUNTRIES": [
-        "NG",
-        "TR",
-        "RU",
-        "UA",
-        "PK",
-        "IN",
-        "CN",
-        "VN",
-        "BR",
-        "CO"
+        "'RU'",
+        "'UA'",
+        "'NG'"
     ],
     "BLACKLIST_CITIES": [
         "Lagos",
